@@ -48,6 +48,12 @@ pub async fn main(config: CliArg) -> anyhow::Result<()> {
     //         Vec::new(),
     //     )
     //     .await?;
+    // driver
+    //     .execute(
+    //         "delete window.navigator.wrappedJSObject.__proto__.webdriver",
+    //         Vec::new(),
+    //     )
+    //     .await?;
 
     // driver.goto("https://bot.sannysoft.com/").await?;
     // tokio::signal::ctrl_c().await?;
@@ -105,32 +111,32 @@ pub async fn main(config: CliArg) -> anyhow::Result<()> {
 
     // let chapter = driver.find(By::Css(css))
 
-    let chapters = driver.find_all(By::ClassName("chapter-item")).await?;
-    for chapter in chapters {
-        let rid = chapter.attr("data-rid").await?;
-        if rid == Some("47".to_string()) {
-            let url = {
-                let sub = chapter.find(By::ClassName("chapter-name")).await?;
-                let tmp = sub.attr("data-cid").await?.unwrap();
-                // 去掉前面的 //
-                tmp.split_at(1).1.to_string()
-            };
-            // chapter.click().await?;
-            break;
+    let volumes = {
+        let volumes = driver.find_all(By::ClassName("volume-chapters")).await?;
+        // volumes.iter().map(|volume| {
+        //     volume.find_all(By::ClassName("chapter-item")).await?
+        // }).collect()
+        let mut ret = Vec::new();
+        for volume in volumes {
+            let chapters = volume.find_all(By::ClassName("chapter-item")).await?;
+            println!("{}:{}", ret.len(), chapters.len());
+            ret.push(chapters);
         }
-    }
-    driver.new_tab().await?;
-    let windows = driver.windows().await?;
-    for win in windows {
-        driver.switch_to_window(win.clone()).await?;
-        let current_url = driver.current_url().await?;
-        println!("当前窗口的 URL: {}", current_url);
-        let title = driver.title().await?;
-        println!("当前窗口的标题: {}", title);
-    }
+        ret
+    };
+    // driver.new_tab().await?;
+    // let windows = driver.windows().await?;
+    // for win in windows {
+    //     driver.switch_to_window(win.clone()).await?;
+    //     let current_url = driver.current_url().await?;
+    //     println!("当前窗口的 URL: {}", current_url);
+    //     let title = driver.title().await?;
+    //     println!("当前窗口的标题: {}", title);
+    // }
 
-    driver.goto("https://www.qidian.com/chapter/1036741406/763719397/").await?;
-
+    // driver
+    //     .goto("https://www.qidian.com/chapter/1036741406/763719397/")
+    //     .await?;
 
     // driver.execute("debugger;", Vec::new()).await?;
     // driver

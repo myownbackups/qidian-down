@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use anyhow::Result;
 use clap::Parser;
 
@@ -7,6 +9,29 @@ const ABOUT: &str = "起点!";
 const LONG_ABOUT: &str = r#"boost !
 基于 msedge webdriver"#;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DriverType {
+    #[default]
+    Edge,
+    Chrome,
+    Firefox,
+}
+
+impl FromStr for DriverType {
+    type Err = std::io::Error;
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "edge" => Ok(DriverType::Edge),
+            "chrome" => Ok(DriverType::Chrome),
+            "firefox" => Ok(DriverType::Firefox),
+            _ => Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Invalid driver type",
+            )),
+        }
+    }
+}
 
 #[derive(Parser, Debug, Clone)]
 #[command(version = VERSION, about = ABOUT, long_about = LONG_ABOUT, name = "namerena-cli-webderiver")]
@@ -27,6 +52,16 @@ pub struct CliArg {
         long_help = "这里存储了 cookie"
     )]
     pub cookie_path: String,
+    #[arg(
+        short = 't',
+        long = "type",
+        default_value = "edge",
+        help = "webdriver 的类型"
+    )]
+    /// 所使用的 webdriver 类型
+    ///
+    /// 可选: edge, chrome, firefox
+    pub driver_type: DriverType,
 }
 
 fn main() -> Result<()> {
