@@ -1,0 +1,13 @@
+[package]
+name = "thirty-test"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { version = "1.0"}
+serde = { version = "1.0", features = ["serde_derive"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["full"] }
+
+thirtyfour = "0.35.0"
+clap = { version = "4", features = ["derive"] }
