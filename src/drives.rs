@@ -8,20 +8,24 @@ use thirtyfour::{
 use crate::CliArg;
 
 pub async fn main(config: CliArg) -> anyhow::Result<()> {
-    let caps = {
-        // let mut cap = DesiredCapabilities::firefox();
-        // let mut prefrence = FirefoxPreferences::new();
-        // prefrence.set("dom.webdriver.enabled", false)?;
-        // prefrence.set("useAutomationExtension", false)?;
-        // cap.set_preferences(prefrence)?;
-
-        let mut cap = DesiredCapabilities::edge();
-        cap.add_arg("--disable-blink-features=AutomationControlled")?;
-
-        cap
+    let driver = match config.driver_type {
+        crate::DriverType::Edge => {
+            let mut cap = DesiredCapabilities::edge();
+            cap.add_arg("--disable-blink-features=AutomationControlled")?;
+            WebDriver::new(&config.driver_url, cap).await?
+        }
+        crate::DriverType::Chrome => {
+            let mut cap = DesiredCapabilities::chrome();
+            cap.add_arg("--disable-blink-features=AutomationControlled")?;
+            WebDriver::new(&config.driver_url, cap).await?
+        } // crate::DriverType::Firefox => {
+          //     // let mut cap = DesiredCapabilities::firefox();
+          //     // let mut prefrence = FirefoxPreferences::new();
+          //     // prefrence.set("dom.webdriver.enabled", false)?;
+          //     // prefrence.set("useAutomationExtension", false)?;
+          //     // cap.set_preferences(prefrence)?;
+          // }
     };
-
-    let driver = WebDriver::new(&config.driver_url, caps).await?;
 
     // 检测是否存在 cookie 文件
     let cookie_path = Path::new(&config.cookie_path);

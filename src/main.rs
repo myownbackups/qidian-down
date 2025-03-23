@@ -15,7 +15,7 @@ pub enum DriverType {
     #[default]
     Edge,
     Chrome,
-    Firefox,
+    // Firefox,
 }
 
 impl FromStr for DriverType {
@@ -24,7 +24,7 @@ impl FromStr for DriverType {
         match s.to_lowercase().as_str() {
             "edge" => Ok(DriverType::Edge),
             "chrome" => Ok(DriverType::Chrome),
-            "firefox" => Ok(DriverType::Firefox),
+            // "firefox" => Ok(DriverType::Firefox),
             _ => Err(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 "Invalid driver type",
@@ -60,7 +60,9 @@ pub struct CliArg {
     )]
     /// 所使用的 webdriver 类型
     ///
-    /// 可选: edge, chrome, firefox
+    /// 可选: edge, chrome
+    ///
+    /// 暂不支持: firefox
     pub driver_type: DriverType,
 }
 
