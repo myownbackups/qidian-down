@@ -36,18 +36,10 @@ impl FromStr for DriverType {
 #[derive(Parser, Debug, Clone)]
 #[command(version = VERSION, about = ABOUT, long_about = LONG_ABOUT, name = "qidian-downloader")]
 pub struct CliArg {
-    #[arg(
-        short = 'd',
-        long = "driver",
-        default_value = "http://localhost:9515",
-    )]
+    #[arg(short = 'd', long = "driver", default_value = "http://localhost:9515")]
     /// webdriver 的地址
     pub driver_url: String,
-    #[arg(
-        short = 'c',
-        long = "cookie",
-        default_value = "cookie.json",
-    )]
+    #[arg(short = 'c', long = "cookie", default_value = "cookie.json")]
     /// cookie 存储文件的路径
     pub cookie_path: String,
     #[arg(

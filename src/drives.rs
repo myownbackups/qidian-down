@@ -7,6 +7,101 @@ use thirtyfour::{
 
 use crate::CliArg;
 
+#[derive(Debug, Clone)]
+pub struct Driver {
+    pub driver: WebDriver,
+    pub cfg: CliArg,
+}
+
+const ROOT_QIDIAN: &str = "https://www.qidian.com";
+
+impl Driver {
+    pub async fn new_from_cli(config: CliArg) -> anyhow::Result<Self> {
+        let driver = match config.driver_type {
+            crate::DriverType::Edge => {
+                let mut cap = DesiredCapabilities::edge();
+                cap.add_arg("--disable-blink-features=AutomationControlled")?;
+                WebDriver::new(&config.driver_url, cap).await?
+            }
+            crate::DriverType::Chrome => {
+                let mut cap = DesiredCapabilities::chrome();
+                cap.add_arg("--disable-blink-features=AutomationControlled")?;
+                WebDriver::new(&config.driver_url, cap).await?
+            } // crate::DriverType::Firefox => {
+              //     // let mut cap = DesiredCapabilities::firefox();
+              //     // let mut prefrence = FirefoxPreferences::new();
+              //     // prefrence.set("dom.webdriver.enabled", false)?;
+              //     // prefrence.set("useAutomationExtension", false)?;
+              //     // cap.set_preferences(prefrence)?;
+              // }
+        };
+
+        Ok(Self {
+            driver,
+            cfg: config,
+        })
+    }
+
+    pub async fn get_cookie(&self) -> anyhow::Result<Vec<Cookie>> {
+        // 检测是否需要登录 (寻找 login-btn)
+        let login_btn = self.driver.find(By::Id("login-btn")).await;
+        match login_btn {
+            Ok(login_btn) => {
+                login_btn.click().await?;
+                // 等待登录完成
+                println!("等待用户登录(等你两分钟)");
+                // 等你两分钟
+                login_btn
+                    .wait_until()
+                    .wait(Duration::from_secs(120), Duration::from_secs(1))
+                    .not_displayed()
+                    .await?;
+            }
+            Err(_) => {
+                // 看来是不需要登录
+                println!("似乎不需要登录");
+            }
+        }
+
+        Ok(self.driver.get_all_cookies().await?)
+    }
+
+    /// 检查并更新 cookie
+    ///
+    /// 运行后会留下一个起点首页
+    pub async fn check_cookie(&self) -> anyhow::Result<()> {
+        self.driver.new_tab().await?;
+
+        // 新建一页做操作
+        let pages = self.driver.windows().await?;
+        let new_page = pages.last().unwrap();
+        self.driver.switch_to_window(new_page.clone()).await?;
+
+        self.driver.goto(ROOT_QIDIAN).await?;
+        let cookie_path = Path::new(&self.cfg.cookie_path);
+        if !cookie_path.exists() {
+            let cookies = self.get_cookie().await?;
+            let json = serde_json::to_string_pretty(&cookies)?;
+            std::fs::write(cookie_path, json)?;
+        } else {
+            let str = std::fs::read_to_string(cookie_path)?;
+            let cookies: Vec<Cookie> = from_str(&str)?;
+            for cookie in cookies {
+                self.driver.add_cookie(cookie).await?;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn save_cookie(&self) -> anyhow::Result<()> {
+        let cookie_path = Path::new(&self.cfg.cookie_path);
+        let cookies = self.driver.get_all_cookies().await?;
+        let json = serde_json::to_string_pretty(&cookies)?;
+        std::fs::write(cookie_path, json)?;
+        Ok(())
+    }
+}
+
 pub async fn main(config: CliArg) -> anyhow::Result<()> {
     let driver = match config.driver_type {
         crate::DriverType::Edge => {
@@ -18,13 +113,7 @@ pub async fn main(config: CliArg) -> anyhow::Result<()> {
             let mut cap = DesiredCapabilities::chrome();
             cap.add_arg("--disable-blink-features=AutomationControlled")?;
             WebDriver::new(&config.driver_url, cap).await?
-        } // crate::DriverType::Firefox => {
-          //     // let mut cap = DesiredCapabilities::firefox();
-          //     // let mut prefrence = FirefoxPreferences::new();
-          //     // prefrence.set("dom.webdriver.enabled", false)?;
-          //     // prefrence.set("useAutomationExtension", false)?;
-          //     // cap.set_preferences(prefrence)?;
-          // }
+        }
     };
 
     // 检测是否存在 cookie 文件
