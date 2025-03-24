@@ -34,29 +34,27 @@ impl FromStr for DriverType {
 }
 
 #[derive(Parser, Debug, Clone)]
-#[command(version = VERSION, about = ABOUT, long_about = LONG_ABOUT, name = "namerena-cli-webderiver")]
+#[command(version = VERSION, about = ABOUT, long_about = LONG_ABOUT, name = "qidian-downloader")]
 pub struct CliArg {
     #[arg(
         short = 'd',
         long = "driver",
         default_value = "http://localhost:9515",
-        help = "webdriver 的地址",
-        long_help = "使用的 msedge webdriver 地址"
     )]
+    /// webdriver 的地址
     pub driver_url: String,
     #[arg(
         short = 'c',
         long = "cookie",
         default_value = "cookie.json",
-        help = "cookie 存储文件的路径",
-        long_help = "这里存储了 cookie"
     )]
+    /// cookie 存储文件的路径
     pub cookie_path: String,
     #[arg(
         short = 't',
         long = "type",
         default_value = "edge",
-        help = "webdriver 的类型"
+        help = "webdriver 的类型 (edge, chrome)"
     )]
     /// 所使用的 webdriver 类型
     ///
