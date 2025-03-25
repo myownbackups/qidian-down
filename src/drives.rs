@@ -2,7 +2,8 @@ use serde_json::from_str;
 use std::{path::Path, time::Duration};
 
 use thirtyfour::{
-    By, ChromiumLikeCapabilities, Cookie, DesiredCapabilities, WebDriver, prelude::ElementWaitable,
+    By, ChromiumLikeCapabilities, Cookie, DesiredCapabilities, WebDriver, WebElement,
+    prelude::ElementWaitable,
 };
 
 use crate::CliArg;
@@ -35,6 +36,9 @@ impl Driver {
               //     // cap.set_preferences(prefrence)?;
               // }
         };
+        driver
+            .set_implicit_wait_timeout(Duration::from_secs(5))
+            .await?;
 
         Ok(Self {
             driver,
@@ -43,19 +47,23 @@ impl Driver {
     }
 
     pub async fn get_cookie(&self) -> anyhow::Result<Vec<Cookie>> {
+        self.driver.refresh().await?;
         // 检测是否需要登录 (寻找 login-btn)
         let login_btn = self.driver.find(By::Id("login-btn")).await;
         match login_btn {
             Ok(login_btn) => {
-                login_btn.click().await?;
-                // 等待登录完成
-                println!("等待用户登录(等你两分钟)");
-                // 等你两分钟
-                login_btn
-                    .wait_until()
-                    .wait(Duration::from_secs(120), Duration::from_secs(1))
-                    .not_displayed()
-                    .await?;
+                if login_btn.is_displayed().await? {
+                    println!("点击登录!");
+                    login_btn.click().await?;
+                    // 等待登录完成
+                    println!("等待用户登录(等你两分钟)");
+                    // 等你两分钟
+                    login_btn
+                        .wait_until()
+                        .wait(Duration::from_secs(120), Duration::from_secs(1))
+                        .not_displayed()
+                        .await?;
+                }
             }
             Err(_) => {
                 // 看来是不需要登录
@@ -70,39 +78,92 @@ impl Driver {
     ///
     /// 运行后会留下一个起点首页
     pub async fn check_cookie(&self) -> anyhow::Result<()> {
-        self.driver.new_tab().await?;
-
         // 新建一页做操作
-        let pages = self.driver.windows().await?;
-        let new_page = pages.last().unwrap();
-        self.driver.switch_to_window(new_page.clone()).await?;
+        // self.driver.new_tab().await?;
+        // let pages = self.driver.windows().await?;
+        // let new_page = pages.last().unwrap();
+        // self.driver.switch_to_window(new_page.clone()).await?;
 
         self.driver.goto(ROOT_QIDIAN).await?;
         let cookie_path = Path::new(&self.cfg.cookie_path);
-        if !cookie_path.exists() {
-            let cookies = self.get_cookie().await?;
-            let json = serde_json::to_string_pretty(&cookies)?;
-            std::fs::write(cookie_path, json)?;
-        } else {
+        if cookie_path.exists() {
             let str = std::fs::read_to_string(cookie_path)?;
             let cookies: Vec<Cookie> = from_str(&str)?;
             for cookie in cookies {
                 self.driver.add_cookie(cookie).await?;
             }
         }
+        let cookies = self.get_cookie().await?;
+        println!("正在保存新的 cookie");
+        let json = serde_json::to_string_pretty(&cookies)?;
+        std::fs::write(cookie_path, json)?;
+        println!("保存成功");
+        if self.driver.windows().await?.len() != 1 {
+            self.driver.close_window().await?;
+            self.driver
+                .switch_to_window(self.driver.windows().await?.first().unwrap().clone())
+                .await?;
+        }
+
         Ok(())
     }
 
-    pub async fn save_cookie(&self) -> anyhow::Result<()> {
-        let cookie_path = Path::new(&self.cfg.cookie_path);
-        let cookies = self.driver.get_all_cookies().await?;
-        let json = serde_json::to_string_pretty(&cookies)?;
-        std::fs::write(cookie_path, json)?;
-        Ok(())
+    pub async fn get_book_chatpers(&self) -> anyhow::Result<Vec<(String, Vec<WebElement>)>> {
+        let root = self.driver.find(By::Id("allCatalog")).await?;
+        let volumes = root.find_all(By::ClassName("catalog-volume")).await?;
+
+        let mut results = Vec::with_capacity(volumes.len());
+
+        for volume in volumes {
+            let title = volume
+                .find(By::ClassName("volume-name"))
+                .await?
+                .inner_html()
+                .await?;
+            // 去掉 <span> 后面的东西
+            let title = title.split("<span").next().unwrap().to_string();
+            let chapters = volume.find_all(By::ClassName("chapter-item")).await?;
+            results.push((title, chapters));
+        }
+
+        Ok(results)
+    }
+
+    pub async fn download_book(&self, book_url: &str) -> anyhow::Result<Vec<Vec<Vec<String>>>> {
+        println!("开始下载 url: {}", book_url);
+        self.driver.goto(book_url).await?;
+        let title = self.driver.title().await?;
+        let title = title.split("》").next().unwrap().to_string();
+        println!("书名: {}", title);
+
+        let volumes = self.get_book_chatpers().await?;
+        for volume in volumes {
+            println!("{:?}", volume);
+        }
+        // println!("book-catalog jsAutoReport allCatalog");
+        // let all = self.driver.find(By::Id("allCatalog")).await?;
+        // println!("{}", all.inner_html().await?);
+        todo!()
     }
 }
 
 pub async fn main(config: CliArg) -> anyhow::Result<()> {
+    let driver = Driver::new_from_cli(config).await?;
+
+    driver.check_cookie().await?;
+
+    // tokio::signal::ctrl_c().await?;
+
+    driver
+        .download_book("https://www.qidian.com/book/1036741406/")
+        .await?;
+
+    tokio::signal::ctrl_c().await?;
+
+    Ok(())
+}
+
+pub async fn a_main(config: CliArg) -> anyhow::Result<()> {
     let driver = match config.driver_type {
         crate::DriverType::Edge => {
             let mut cap = DesiredCapabilities::edge();
@@ -130,11 +191,6 @@ pub async fn main(config: CliArg) -> anyhow::Result<()> {
         }
         need_cookie = false;
     }
-
-    // disable-blink-features=AutomationControlled
-
-    // let mut cookie = Cookie::new("", value);
-
     // driver
     //     .execute(
     //         "Object.defineProperty(navigator, 'webdriver', {get: () => false})",
