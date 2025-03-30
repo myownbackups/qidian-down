@@ -108,27 +108,6 @@ impl Driver {
         Ok(())
     }
 
-    pub async fn get_book_chatpers(&self) -> anyhow::Result<Vec<(String, Vec<WebElement>)>> {
-        let root = self.driver.find(By::Id("allCatalog")).await?;
-        let volumes = root.find_all(By::ClassName("catalog-volume")).await?;
-
-        let mut results = Vec::with_capacity(volumes.len());
-
-        for volume in volumes {
-            let title = volume
-                .find(By::ClassName("volume-name"))
-                .await?
-                .inner_html()
-                .await?;
-            // 去掉 <span> 后面的东西
-            let title = title.split("<span").next().unwrap().to_string();
-            let chapters = volume.find_all(By::ClassName("chapter-item")).await?;
-            results.push((title, chapters));
-        }
-
-        Ok(results)
-    }
-
     pub async fn download_book(&self, book_url: &str) -> anyhow::Result<Vec<Vec<Vec<String>>>> {
         println!("开始下载 url: {}", book_url);
         self.driver.goto(book_url).await?;
@@ -136,13 +115,13 @@ impl Driver {
         let title = title.split("》").next().unwrap().to_string();
         println!("书名: {}", title);
 
-        let volumes = self.get_book_chatpers().await?;
-        for volume in volumes {
-            println!("{:?}", volume);
-        }
-        // println!("book-catalog jsAutoReport allCatalog");
-        // let all = self.driver.find(By::Id("allCatalog")).await?;
+        let all = self.driver.find(By::Id("allCatalog")).await?;
         // println!("{}", all.inner_html().await?);
+        let book_info = crate::parse_page::book_info::parse(all.inner_html().await?);
+
+        println!("{:?}", book_info);
+
+        println!("书长度: {}", book_info.length());
         todo!()
     }
 }

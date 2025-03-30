@@ -11,3 +11,5 @@ tokio = { version = "1", features = ["full"] }
 
 thirtyfour = "0.35.0"
 clap = { version = "4", features = ["derive"] }
+scraper = "0.23.1"
+regex = { version = "1.11.1", features = ["std", "use_std"] }

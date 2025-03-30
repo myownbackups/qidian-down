@@ -3,7 +3,9 @@ use std::str::FromStr;
 use anyhow::Result;
 use clap::Parser;
 
-mod drives;
+pub mod books;
+pub mod drives;
+pub mod parse_page;
 
 const ABOUT: &str = "起点!";
 const LONG_ABOUT: &str = r#"boost !
