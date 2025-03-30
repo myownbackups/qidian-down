@@ -85,10 +85,10 @@ pub mod book_info {
             for inner_chapter in inner_chapters {
                 let infos = inner_chapter.attr("title").expect("章节未找到标题");
                 let href = inner_chapter.attr("href").expect("章节未找到链接");
-                let chapter_id: String = {
+                let (chapter_id, url) = {
                     // //www.qidian.com/chapter/1036741406/748679604/
-                    // -> 748679604
-                    href.split('/').nth(4).unwrap().to_string()
+                    // -> 748679604, https://www.qidian.com/chapter/1036741406/748679604/
+                    (href.split('/').nth(4).unwrap().to_string(), href.replace("//", "https://"))
                 };
                 let title: String = inner_chapter.text().collect();
                 let (date, len) = analyze_chapter_name(infos).expect("解析标题错误");
@@ -97,6 +97,7 @@ pub mod book_info {
                     length: len,
                     release_date: date,
                     id: chapter_id,
+                    url,
                 };
                 volume.chapters.push(chapter);
             }

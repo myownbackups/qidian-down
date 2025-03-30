@@ -29,6 +29,8 @@ pub struct BookChapter {
     pub release_date: String,
     /// id
     pub id: String,
+    /// url
+    pub url: String,
 }
 
 impl BookInfo {
