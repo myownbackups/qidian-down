@@ -2,8 +2,7 @@ use serde_json::from_str;
 use std::{path::Path, time::Duration};
 
 use thirtyfour::{
-    By, ChromiumLikeCapabilities, Cookie, DesiredCapabilities, WebDriver, WebElement,
-    prelude::ElementWaitable,
+    prelude::ElementWaitable, By, ChromiumLikeCapabilities, Cookie, DesiredCapabilities, Key, WebDriver, WebElement
 };
 
 use crate::CliArg;
@@ -119,9 +118,27 @@ impl Driver {
         // println!("{}", all.inner_html().await?);
         let book_info = crate::parse_page::book_info::parse(all.inner_html().await?);
 
-        println!("{:?}", book_info);
+        // println!("{:#?}", book_info);
 
         println!("书长度: {}", book_info.length());
+        let first_chapter = book_info.volumes.first().unwrap().chapters.first().unwrap();
+        let chatper_item = self.driver.find(By::Css(format!("a[href*='{}']", first_chapter.a_href_tag()))).await?;
+        println!("等1s看看第一章");
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        chatper_item.click().await?;
+        let main_element = self.driver.find(By::Tag("main")).await?;
+        let data = main_element.inner_html().await?;
+        println!("{}", data);
+        println!("等3s看看第二章");
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        self.driver.active_element().await?.send_keys(Key::Right).await?;
+
+        let main_element = self.driver.find(By::Tag("main")).await?;
+        println!("data: {}", main_element.text().await?);
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        // main_element.send_keys(Key::Right).await?;
+        self.driver.active_element().await?.send_keys(Key::Right).await?;
+
         todo!()
     }
 }
