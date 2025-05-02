@@ -108,6 +108,21 @@ impl Driver {
         Ok(())
     }
 
+    pub async fn close_pop_window(&self) -> anyhow::Result<()> {
+        // content
+        // bg-s-gray-100 w-28px h-28px rounded-1 flex items-center justify-center hover-24 active-10 p-0 <sm:hidden absolute top-10px right-10px
+        // icon-close text-20px text-s-gray-400
+        match self.driver.find(By::ClassName("content")).await {
+            Ok(element) => {
+                println!("似乎找到了按键提示弹窗 {}", element.text().await?);
+            }
+            Err(e) => {
+                println!("未找到弹窗元素: {}", e);
+            }
+        }
+        Ok(())
+    }
+
     pub async fn download_book(&self, book_url: &str) -> anyhow::Result<Vec<Vec<Vec<String>>>> {
         println!("开始下载 url: {}", book_url);
         self.driver.goto(book_url).await?;
@@ -130,10 +145,12 @@ impl Driver {
                 first_chapter.a_href_tag()
             )))
             .await?;
+
         println!("等1s看看第一章");
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         chatper_item.click().await?;
         let main_element = self.driver.find(By::Tag("main")).await?;
+        self.close_pop_window().await?;
         let data = main_element.inner_html().await?;
         println!("{}", data);
         println!("等30s看看第二章");
@@ -143,11 +160,9 @@ impl Driver {
             .await?
             .send_keys(Key::Right)
             .await?;
-        // content
-        // bg-s-gray-100 w-28px h-28px rounded-1 flex items-center justify-center hover-24 active-10 p-0 <sm:hidden absolute top-10px right-10px
-        // icon-close text-20px text-s-gray-400
 
         let main_element = self.driver.find(By::Tag("main")).await?;
+        self.close_pop_window().await?;
         println!("data: {}", main_element.text().await?);
         tokio::time::sleep(std::time::Duration::from_secs(30)).await;
         // main_element.send_keys(Key::Right).await?;
