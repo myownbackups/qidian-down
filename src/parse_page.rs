@@ -23,8 +23,9 @@ pub mod book_info {
                 .*?                   # 中间任意字符
                 (?:章\s*节\s*字\s*数[:：]\s*)?  # 可选的字数前缀
                 (?P<count>\d+)        # 匹配字数
-                "
-            ).expect("Invalid regex pattern")
+                ",
+            )
+            .expect("Invalid regex pattern")
         })
     }
 
@@ -38,7 +39,9 @@ pub mod book_info {
 
         let captures = chapter_info_re().captures(raw_name)?;
 
-        let time = captures.name("time").map(|m| m.as_str().trim().to_string())?;
+        let time = captures
+            .name("time")
+            .map(|m| m.as_str().trim().to_string())?;
         let count = captures.name("count").map(|m| m.as_str().parse().ok())??;
         Some((time.to_string(), count))
     }
@@ -161,10 +164,14 @@ pub mod book_info {
         #[test]
         fn test_analyze_chapter_name() {
             let cases = vec![
-                ("围棋：我和AI五五开 1.应杰 首发时间：2023-04-03 10:19:10 章节字数：2136",
-                 Some(("2023-04-03 10:19:10".to_string(), 2136))),
-                ("第一章 测试 时间：2023-01-01 00:00:00 字数：1000",
-                 Some(("2023-01-01 00:00:00".to_string(), 1000))),
+                (
+                    "围棋：我和AI五五开 1.应杰 首发时间：2023-04-03 10:19:10 章节字数：2136",
+                    Some(("2023-04-03 10:19:10".to_string(), 2136)),
+                ),
+                (
+                    "第一章 测试 时间：2023-01-01 00:00:00 字数：1000",
+                    Some(("2023-01-01 00:00:00".to_string(), 1000)),
+                ),
                 ("无效章节", None),
             ];
 

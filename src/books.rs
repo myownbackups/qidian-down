@@ -59,10 +59,12 @@ impl BookChapter {
     pub fn new_from_html(href: &str, release_date: String, title: String, length: u32) -> Self {
         let (chapter_id, url) = {
             // //www.qidian.com/chapter/1036741406/748679604/
-            (href.split('/').nth(4).unwrap().to_string(), href.to_string())
+            (
+                href.split('/').nth(4).unwrap().to_string(),
+                href.to_string(),
+            )
         };
         Self::new(title, length, release_date, chapter_id, url)
-
     }
 
     pub fn a_href_tag(&self) -> String {
