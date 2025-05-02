@@ -109,15 +109,25 @@ impl Driver {
     }
 
     pub async fn close_pop_window(&self) -> anyhow::Result<()> {
-        // content
         // bg-s-gray-100 w-28px h-28px rounded-1 flex items-center justify-center hover-24 active-10 p-0 <sm:hidden absolute top-10px right-10px
         // icon-close text-20px text-s-gray-400
-        match self.driver.find(By::ClassName("content")).await {
+        // #reader > div.fixed.inset-0.bg-black-36.z-5.flex.items-center.justify-center > div > div > button
+        // /html/body/div[1]/div/div[5]/div/div/button
+        // //*[@id="reader"]/div[5]/div/div/button
+        match self
+            .driver
+            .find(By::XPath(r#"//*[@id="reader"]/div[5]/div/div/button"#))
+            .await
+        {
             Ok(element) => {
-                println!("似乎找到了按键提示弹窗 {}", element.text().await?);
+                println!(
+                    "=====找到按键提示弹窗，点击关闭===== \n{}",
+                    element.inner_html().await?
+                );
+                element.click().await?;
             }
-            Err(e) => {
-                println!("未找到弹窗元素: {}", e);
+            Err(_) => {
+                println!("未找到弹窗元素");
             }
         }
         Ok(())
@@ -150,11 +160,12 @@ impl Driver {
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         chatper_item.click().await?;
         let main_element = self.driver.find(By::Tag("main")).await?;
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         self.close_pop_window().await?;
         let data = main_element.inner_html().await?;
         println!("{}", data);
-        println!("等30s看看第二章");
-        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        println!("等3s看看第二章");
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
         self.driver
             .active_element()
             .await?
@@ -164,14 +175,13 @@ impl Driver {
         let main_element = self.driver.find(By::Tag("main")).await?;
         self.close_pop_window().await?;
         println!("data: {}", main_element.text().await?);
-        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
-        // main_element.send_keys(Key::Right).await?;
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
         self.driver
             .active_element()
             .await?
             .send_keys(Key::Right)
             .await?;
-        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
+        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
         todo!()
     }
