@@ -116,12 +116,16 @@ impl Driver {
         // //*[@id="reader"]/div[5]/div/div/button
         match self
             .driver
-            .find(By::XPath(r#"//*[@id="reader"]/div[5]/div/div/button"#))
+            // .find(By::XPath(r#"//*[@id="reader"]/div[5]/div/div/button"#))
+            .find(By::XPath(
+                r#"//*[@id="reader"]//div[@class="content"]//button"#,
+            ))
+            // .find(By::XPath(r#"//*[@id="reader"]//div[@class="content"]//button[contains(@class, "bg-s-gray-100") and contains(@class, "absolute")]"#))
             .await
         {
             Ok(element) => {
                 println!(
-                    "=====找到按键提示弹窗，点击关闭===== \n{}",
+                    "=====找到按键提示弹窗，点击关闭(祈祷起点没有瞎改页面)===== \n{}",
                     element.inner_html().await?
                 );
                 element.click().await?;
@@ -159,6 +163,7 @@ impl Driver {
         println!("等1s看看第一章");
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         chatper_item.click().await?;
+
         let main_element = self.driver.find(By::Tag("main")).await?;
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         self.close_pop_window().await?;
