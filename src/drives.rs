@@ -109,20 +109,7 @@ impl Driver {
     }
 
     pub async fn close_pop_window(&self) -> anyhow::Result<()> {
-        // bg-s-gray-100 w-28px h-28px rounded-1 flex items-center justify-center hover-24 active-10 p-0 <sm:hidden absolute top-10px right-10px
-        // icon-close text-20px text-s-gray-400
-        // #reader > div.fixed.inset-0.bg-black-36.z-5.flex.items-center.justify-center > div > div > button
-        // /html/body/div[1]/div/div[5]/div/div/button
-        // //*[@id="reader"]/div[5]/div/div/button
-        match self
-            .driver
-            // .find(By::XPath(r#"//*[@id="reader"]/div[5]/div/div/button"#))
-            .find(By::XPath(
-                r#"//*[@id="reader"]//div[@class="content"]//button"#,
-            ))
-            // .find(By::XPath(r#"//*[@id="reader"]//div[@class="content"]//button[contains(@class, "bg-s-gray-100") and contains(@class, "absolute")]"#))
-            .await
-        {
+        match self.driver.find(By::Css("#reader .content button")).await {
             Ok(element) => {
                 println!(
                     "=====找到按键提示弹窗，点击关闭(祈祷起点没有瞎改页面)===== \n{}",
