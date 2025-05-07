@@ -111,10 +111,7 @@ impl Driver {
     pub async fn close_pop_window(&self) -> anyhow::Result<()> {
         match self.driver.find(By::Css("#reader .content button")).await {
             Ok(element) => {
-                println!(
-                    "=====找到按键提示弹窗，点击关闭(祈祷起点没有瞎改页面)===== \n{}",
-                    element.inner_html().await?
-                );
+                println!("=====找到按键提示弹窗，点击关闭(祈祷起点没有瞎改页面)=====");
                 element.click().await?;
             }
             Err(_) => {
@@ -122,6 +119,13 @@ impl Driver {
             }
         }
         Ok(())
+    }
+
+    /// 翻页并保存当前页面内容
+    pub async fn flip_page_and_save(&self) -> anyhow::Result<String> {
+        let content = self.driver.find(By::Css("#reader .content")).await?;
+        let content = content.text().await?;
+        Ok(content)
     }
 
     pub async fn download_book(&self, book_url: &str) -> anyhow::Result<Vec<Vec<Vec<String>>>> {
