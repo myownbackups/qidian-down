@@ -1,5 +1,6 @@
+use rand::Rng;
 use serde_json::from_str;
-use std::{path::Path, time::Duration};
+use std::{path::{Path, PathBuf}, str::FromStr, time::Duration};
 
 use thirtyfour::{
     By, ChromiumLikeCapabilities, Cookie, DesiredCapabilities, Key, WebDriver, WebElement,
@@ -128,7 +129,7 @@ impl Driver {
         Ok(content)
     }
 
-    pub async fn download_book(&self, book_url: &str) -> anyhow::Result<Vec<Vec<Vec<String>>>> {
+    pub async fn download_book(&self, book_url: &str) -> anyhow::Result<Vec<Vec<String>>> {
         println!("开始下载 url: {}", book_url);
         self.driver.goto(book_url).await?;
         let title = self.driver.title().await?;
@@ -139,7 +140,6 @@ impl Driver {
         // println!("{}", all.inner_html().await?);
         let book_info = crate::parse_page::book_info::parse(all.inner_html().await?);
 
-        // println!("{:#?}", book_info);
 
         println!("书长度: {}", book_info.length());
         let first_chapter = book_info.volumes.first().unwrap().chapters.first().unwrap();
@@ -155,31 +155,68 @@ impl Driver {
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         chatper_item.click().await?;
 
-        let main_element = self.driver.find(By::Tag("main")).await?;
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-        self.close_pop_window().await?;
-        let data = main_element.inner_html().await?;
-        println!("{}", data);
-        println!("等3s看看第二章");
-        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-        self.driver
-            .active_element()
-            .await?
-            .send_keys(Key::Right)
-            .await?;
+        let mut datas = Vec::with_capacity(book_info.volumes.len());
+        let mut rng = rand::rng();
+        let out_path = PathBuf::from_str("./out")?;
+        if !out_path.exists() {
+            std::fs::create_dir(&out_path)?;
+        }
+        for vol in book_info.volumes.iter() {
+            let mut chapter_htmls = Vec::with_capacity(vol.chapters.len());
+            for chapter in vol.chapters.iter() {
+                let main_element = self.driver.find(By::Tag("main")).await?;
+                let html = main_element.inner_html().await?;
+                // 随机等一段时间 再 关弹窗
+                println!("正在 阅读 《{}》", chapter.title);
 
-        let main_element = self.driver.find(By::Tag("main")).await?;
-        self.close_pop_window().await?;
-        println!("data: {}", main_element.text().await?);
-        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
-        self.driver
-            .active_element()
-            .await?
-            .send_keys(Key::Right)
-            .await?;
-        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+                let mut path = out_path.clone();
+                path.push(format!("{}-{}.html", chapter.title, chapter.id));
+                println!("保存到 {path:?}");
+                std::fs::write(path, &html)?;
 
-        todo!()
+                chapter_htmls.push(html);
+
+                tokio::time::sleep(Duration::from_millis(100 + rng.random_range(0..200))).await;
+                self.close_pop_window().await?;
+                // 随机再等一会再看下一章
+
+                tokio::time::sleep(Duration::from_millis(500 + rng.random_range(0..500))).await;
+                self.driver
+                    .active_element()
+                    .await?
+                    .send_keys(Key::Right)
+                    .await?;
+            }
+            datas.push(chapter_htmls);
+        }
+
+        for (vol, vol_data) in book_info.volumes.iter().zip(datas.iter()) {
+            for (chatper, chapter_html) in vol.chapters.iter().zip(vol_data.iter()) {
+                let mut path = out_path.clone();
+                path.push(format!("{}-{}", chatper.title, chatper.id));
+                std::fs::write(path, chapter_html)?;
+            }
+        }
+
+        // tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        // self.close_pop_window().await?;
+        // let data = main_element.inner_html().await?;
+        // println!("{}", data);
+        // println!("等3s看看第二章");
+        // tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+
+        // let main_element = self.driver.find(By::Tag("main")).await?;
+        // self.close_pop_window().await?;
+        // println!("data: {}", main_element.text().await?);
+        // tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+        // self.driver
+        //     .active_element()
+        //     .await?
+        //     .send_keys(Key::Right)
+        //     .await?;
+        // tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+
+        Ok(datas)
     }
 }
 
@@ -191,7 +228,8 @@ pub async fn main(config: CliArg) -> anyhow::Result<()> {
     // tokio::signal::ctrl_c().await?;
 
     driver
-        .download_book("https://www.qidian.com/book/1036741406/")
+        .download_book("https://www.qidian.com/book/1042804894/")
+        // .download_book("https://www.qidian.com/book/1036741406/")
         .await?;
 
     tokio::signal::ctrl_c().await?;

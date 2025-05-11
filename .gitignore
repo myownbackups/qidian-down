@@ -3,3 +3,6 @@ cookie.json
 *node_modules*
 
 *.html
+test.toml
+
+/out
