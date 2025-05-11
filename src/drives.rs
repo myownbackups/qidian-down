@@ -164,7 +164,6 @@ impl Driver {
         if !out_path.exists() {
             std::fs::create_dir(&out_path)?;
         }
-        let mut counter = 0;
         for (count, vol) in book_info.volumes.iter().enumerate() {
             let mut chapter_htmls = Vec::with_capacity(vol.chapters.len());
             let mut volume_path = out_path.clone();
@@ -173,7 +172,6 @@ impl Driver {
                 std::fs::create_dir(&volume_path)?;
             }
             for (chp_count, chapter) in vol.chapters.iter().enumerate() {
-                counter += 1;
                 match self.driver.find(By::Tag("main")).await {
                     Ok(main_element) => {
                         let html = main_element.inner_html().await?;
@@ -182,11 +180,12 @@ impl Driver {
 
                         let mut chp_path = volume_path.clone();
                         chp_path.push(format!(
-                            "{counter}_{}_{chp_count}-{}.html",
+                            "{chp_count}_{}-{}.html",
                             chapter.title, chapter.id
                         ));
-                        println!("保存到 {chp_path:?}");
+                        print!("保存到 {chp_path:?}");
                         std::fs::write(chp_path, &html)?;
+                        println!("写完了");
 
                         chapter_htmls.push(html);
                     }
@@ -195,11 +194,11 @@ impl Driver {
                     }
                 };
 
-                tokio::time::sleep(Duration::from_millis(50 + rng.random_range(0..50))).await;
+                std::thread::sleep(Duration::from_millis(50 + rng.random_range(0..50)));
                 self.close_pop_window().await?;
                 // 随机再等一会再看下一章
 
-                tokio::time::sleep(Duration::from_millis(50 + rng.random_range(0..50))).await;
+                std::thread::sleep(Duration::from_millis(rng.random_range(0..50)));
                 self.driver
                     .active_element()
                     .await?
