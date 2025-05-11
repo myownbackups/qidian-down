@@ -1,6 +1,10 @@
 use rand::Rng;
 use serde_json::from_str;
-use std::{path::{Path, PathBuf}, str::FromStr, time::Duration};
+use std::{
+    path::{Path, PathBuf},
+    str::FromStr,
+    time::Duration,
+};
 
 use thirtyfour::{
     By, ChromiumLikeCapabilities, Cookie, DesiredCapabilities, Key, WebDriver, WebElement,
@@ -140,7 +144,6 @@ impl Driver {
         // println!("{}", all.inner_html().await?);
         let book_info = crate::parse_page::book_info::parse(all.inner_html().await?);
 
-
         println!("书长度: {}", book_info.length());
         let first_chapter = book_info.volumes.first().unwrap().chapters.first().unwrap();
         let chatper_item = self
@@ -161,26 +164,42 @@ impl Driver {
         if !out_path.exists() {
             std::fs::create_dir(&out_path)?;
         }
-        for vol in book_info.volumes.iter() {
+        let mut counter = 0;
+        for (count, vol) in book_info.volumes.iter().enumerate() {
             let mut chapter_htmls = Vec::with_capacity(vol.chapters.len());
-            for chapter in vol.chapters.iter() {
-                let main_element = self.driver.find(By::Tag("main")).await?;
-                let html = main_element.inner_html().await?;
-                // 随机等一段时间 再 关弹窗
-                println!("正在 阅读 《{}》", chapter.title);
+            let mut volume_path = out_path.clone();
+            volume_path.push(format!("{count}_{}", vol.title));
+            if !volume_path.exists() {
+                std::fs::create_dir(&volume_path)?;
+            }
+            for (chp_count, chapter) in vol.chapters.iter().enumerate() {
+                counter += 1;
+                match self.driver.find(By::Tag("main")).await {
+                    Ok(main_element) => {
+                        let html = main_element.inner_html().await?;
+                        // 随机等一段时间 再 关弹窗
+                        println!("正在 阅读 《{}》", chapter.title);
 
-                let mut path = out_path.clone();
-                path.push(format!("{}-{}.html", chapter.title, chapter.id));
-                println!("保存到 {path:?}");
-                std::fs::write(path, &html)?;
+                        let mut chp_path = volume_path.clone();
+                        chp_path.push(format!(
+                            "{counter}_{}_{chp_count}-{}.html",
+                            chapter.title, chapter.id
+                        ));
+                        println!("保存到 {chp_path:?}");
+                        std::fs::write(chp_path, &html)?;
 
-                chapter_htmls.push(html);
+                        chapter_htmls.push(html);
+                    }
+                    Err(e) => {
+                        println!("出毛病啦! {e}")
+                    }
+                };
 
-                tokio::time::sleep(Duration::from_millis(100 + rng.random_range(0..200))).await;
+                tokio::time::sleep(Duration::from_millis(50 + rng.random_range(0..50))).await;
                 self.close_pop_window().await?;
                 // 随机再等一会再看下一章
 
-                tokio::time::sleep(Duration::from_millis(500 + rng.random_range(0..500))).await;
+                tokio::time::sleep(Duration::from_millis(50 + rng.random_range(0..50))).await;
                 self.driver
                     .active_element()
                     .await?

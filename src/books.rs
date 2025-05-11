@@ -60,7 +60,7 @@ impl BookChapter {
         let (chapter_id, url) = {
             // //www.qidian.com/chapter/1036741406/748679604/
             (
-                href.split('/').nth(4).unwrap().to_string(),
+                href.split('/').nth(5).unwrap().to_string(),
                 href.to_string(),
             )
         };
